@@ -1,24 +1,26 @@
 import React, { useEffect, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
-import api from "../services/api.ts";
-
-interface SignupForm {
-  email: string;
-  password: string;
-}
+import { validateEmail, validatePassword } from "../lib/validator.ts";
+import { loginServ } from "../services/loginServ.ts";
+import { LoginForm } from "../types/form.types.ts";
+import eyeopen from "./../assets/eye-regular.svg";
+import eyeclose from "./../assets/eye-slash-regular.svg";
 
 const Login: React.FC = () => {
+  const componentName = "login";
   const isLogin = localStorage.getItem("isLogin");
+  const [showPassword, setShowPassword] = useState(false);
+
   useEffect(() => {
     isLogin ? (window.location.href = "/chat") : "";
   }, [isLogin]);
 
   const [LogInIsLoading, setSignInIsLoading] = useState<boolean>(false);
-  const [form, setForm] = useState<SignupForm>({
+  const [form, setForm] = useState<LoginForm>({
     email: "",
     password: "",
   });
-  const [errors, setErrors] = useState<SignupForm>({
+  const [errors, setErrors] = useState<LoginForm>({
     email: "",
     password: "",
   });
@@ -28,11 +30,13 @@ const Login: React.FC = () => {
     setForm({ ...form, [name]: value });
     switch (name) {
       case "email":
-        validateEmail(value);
+        const emailError = validateEmail(value);
+        setErrors((prev) => ({ ...prev, email: emailError }));
 
         break;
       case "password":
-        validatePassword(value);
+        const passwordError = validatePassword(value, componentName);
+        setErrors((prev) => ({ ...prev, password: passwordError }));
 
         break;
 
@@ -43,82 +47,37 @@ const Login: React.FC = () => {
 
   const submitLogin = async () => {
     setSignInIsLoading(true);
-    validateEmail(form.email);
-    validatePassword(form.password);
+    const emailError = validateEmail(form.email);
+    const passwordError = validatePassword(form.password, componentName);
 
-    if (!errors.email || !errors.password) {
+    if (emailError.trim() === "" && passwordError.trim() === "") {
       try {
-        if (!errors.email || !errors.password) {
-          const response = await api.post(
-            "/auth/login",
-            {
-              email: form.email,
-              password: form.password,
-            },
-            {
-              withCredentials: true,
-            }
-          );
+        const response = await loginServ(form.email, form.password);
 
-          console.log("Login response", response.data);
-          if (response.data.success) {
-            localStorage.setItem("isLogin", response.data.success);
-            localStorage.setItem("userID", response.data.userId);
+        console.log("Login response", response);
+        if (response) {
+          if (response.success) {
+            localStorage.setItem("isLogin", String(response.success));
+            localStorage.setItem(
+              "userID",
+              response.userId ? response.userId : ""
+            );
             window.location.href = "/chat";
+          } else if (response.emailError) {
+            setErrors((prev) => ({ ...prev, email: "Email not found" }));
+          } else if (response.passwordError) {
+            setErrors((prev) => ({
+              ...prev,
+              password: "Password is incorrect",
+            }));
           }
         }
       } catch (err: any) {
-        console.error(err.response.data.message);
+        console.error(err);
       }
     }
 
     setSignInIsLoading(false);
-  };
-
-  const validateEmail = async (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        email: "Email address is required",
-      }));
-      return;
-    }
-
-    if (!re.test(email)) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        email: "Invalid email address",
-      }));
-      return;
-    }
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      email: "",
-    }));
-  };
-
-  const validatePassword = (password: string) => {
-    if (!password) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        password: "Password is required",
-      }));
-      return;
-    }
-    if (!(password.length >= 12)) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        password: "Password must be at least 12 characters",
-      }));
-      return;
-    }
-
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      password: "",
-    }));
   };
 
   return (
@@ -177,11 +136,11 @@ const Login: React.FC = () => {
                   Password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
                   className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
@@ -190,6 +149,17 @@ const Login: React.FC = () => {
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPassword ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.password && (

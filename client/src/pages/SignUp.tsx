@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
-import api from "../services/api.ts";
 import {
   validateEmail,
   validatePassword,
   validateRepeatPassword,
 } from "../lib/validator.ts";
-
-interface SignupForm {
-  email: string;
-  password: string;
-  repeat_password: string;
-}
+import { signupServ } from "../services/signupServ.ts";
+import { SignupForm } from "../types/form.types.ts";
+import eyeopen from "./../assets/eye-regular.svg";
+import eyeclose from "./../assets/eye-slash-regular.svg";
 
 const Signup: React.FC = () => {
+  const componentName = "signup";
   const isLogin = localStorage.getItem("isLogin");
   const [signUpIsLoading, setSignUpIsLoading] = useState<boolean>(false);
   const [form, setForm] = useState<SignupForm>({
@@ -26,21 +24,32 @@ const Signup: React.FC = () => {
     password: "",
     repeat_password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordRepeat, setShowPasswordRepeat] = useState(false);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
     switch (name) {
       case "email":
-        validateEmail(value);
+        const emailError = validateEmail(value);
+        setErrors((prev) => ({ ...prev, email: emailError }));
 
         break;
       case "password":
-        validatePassword(value);
+        const passwordError = validatePassword(value, componentName);
+        setErrors((prev) => ({ ...prev, password: passwordError }));
 
         break;
       case "repeat_password":
-        validateRepeatPassword(value, form.password);
+        const repeat_passwordError = validateRepeatPassword(
+          value,
+          form.password
+        );
+        setErrors((prev) => ({
+          ...prev,
+          repeat_password: repeat_passwordError,
+        }));
 
         break;
       default:
@@ -49,40 +58,36 @@ const Signup: React.FC = () => {
   };
 
   const submitSignUP = async () => {
+    console.log("clicked");
+
     setSignUpIsLoading(true);
     const emailerror = validateEmail(form.email);
-    const passwordError = validatePassword(form.password);
+    const passwordError = validatePassword(form.password, componentName);
     const repeatPassError = validateRepeatPassword(
       form.repeat_password,
       form.password
     );
     if (
-      emailerror.trim() !== "" ||
-      passwordError.trim() !== "" ||
-      repeatPassError.trim() !== ""
+      emailerror.trim() === "" &&
+      passwordError.trim() === "" &&
+      repeatPassError.trim() === ""
     ) {
       try {
-        if (!errors.email || !errors.password || !errors.repeat_password) {
-          const response = await api.post(
-            "/auth/signup",
-            {
-              email: form.email,
-              password: form.password,
-            },
-            {
-              withCredentials: true,
-            }
-          );
+        const response = await signupServ(form.email, form.password);
 
-          console.log("signup response", response.data);
-          if (response.data.success) {
-            localStorage.setItem("isLogin", response.data.success);
-            localStorage.setItem("userID", response.data.userId);
+        console.log("singup resp type: ", response);
+        if (response) {
+          const trimmedResponse = response.trim();
+          if (trimmedResponse === "true") {
+            localStorage.setItem("isLogin", trimmedResponse);
+            localStorage.setItem("userID", trimmedResponse);
             window.location.href = "/chat";
+          } else if (trimmedResponse === "taken") {
+            setErrors((prev) => ({ ...prev, email: "Email already taken" }));
           }
         }
       } catch (err: any) {
-        console.error(err.response.data.message);
+        console.error(err);
       }
     }
 
@@ -149,19 +154,30 @@ const Signup: React.FC = () => {
                   Password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
-                  className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border py-1.5 pr-[45px] text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
                     errors.password
                       ? "border-rose-600 ring-rose-600"
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPassword ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.password && (
@@ -183,19 +199,30 @@ const Signup: React.FC = () => {
                   Repeat password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="repeat_password"
                   name="repeat_password"
-                  type="password"
+                  type={showPasswordRepeat ? "text" : "password"}
                   value={form.repeat_password}
                   onChange={handleChange}
-                  className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border py-1.5 pr-[45px] text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
                     errors.repeat_password
                       ? "border-rose-600 ring-rose-600"
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordRepeat(!showPasswordRepeat)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPasswordRepeat ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.repeat_password && (

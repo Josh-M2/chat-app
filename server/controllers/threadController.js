@@ -15,7 +15,7 @@ export const getUser = async (req, res) => {
 // Endpoint to send a message
 export const sendMessage = async (req, res) => {
   const { senderId, receiverId, content, fileUrl } = req.body;
-
+  const socket = req.app.get("socket");
   try {
     const newMessage = new userThreadModel({
       senderId,
@@ -24,7 +24,10 @@ export const sendMessage = async (req, res) => {
       fileUrl,
     });
 
-    await newMessage.save(); // Save the message to the database
+    const message = await newMessage.save(); // Save the message to the database
+    console.log("message: ", message);
+    socket.emit("updateChat", message);
+    socket.emit("receiveNotification", message.senderId);
     res.status(201).json(newMessage);
   } catch (error) {
     res.status(500).json({ message: "Error sending message", error });
