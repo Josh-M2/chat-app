@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
-import api from "../services/api.ts";
 import {
   validateEmail,
   validatePassword,
   validateRepeatPassword,
 } from "../lib/validator.ts";
-
-interface SignupForm {
-  email: string;
-  password: string;
-  repeat_password: string;
-}
+import { signupServ } from "../services/signupServ.ts";
+import { SignupForm } from "../types/form.types.ts";
 
 const Signup: React.FC = () => {
+  const componentName = "signup";
   const isLogin = localStorage.getItem("isLogin");
   const [signUpIsLoading, setSignUpIsLoading] = useState<boolean>(false);
   const [form, setForm] = useState<SignupForm>({
@@ -32,15 +28,24 @@ const Signup: React.FC = () => {
     setForm({ ...form, [name]: value });
     switch (name) {
       case "email":
-        validateEmail(value);
+        const emailError = validateEmail(value);
+        setErrors((prev) => ({ ...prev, email: emailError }));
 
         break;
       case "password":
-        validatePassword(value);
+        const passwordError = validatePassword(value, componentName);
+        setErrors((prev) => ({ ...prev, password: passwordError }));
 
         break;
       case "repeat_password":
-        validateRepeatPassword(value, form.password);
+        const repeat_passwordError = validateRepeatPassword(
+          value,
+          form.password
+        );
+        setErrors((prev) => ({
+          ...prev,
+          repeat_password: repeat_passwordError,
+        }));
 
         break;
       default:
@@ -49,41 +54,36 @@ const Signup: React.FC = () => {
   };
 
   const submitSignUP = async () => {
+    console.log("clicked");
+
     setSignUpIsLoading(true);
     const emailerror = validateEmail(form.email);
-    const passwordError = validatePassword(form.password);
+    const passwordError = validatePassword(form.password, componentName);
     const repeatPassError = validateRepeatPassword(
       form.repeat_password,
       form.password
     );
     if (
-      emailerror.trim() !== "" ||
-      passwordError.trim() !== "" ||
-      repeatPassError.trim() !== ""
+      emailerror.trim() === "" &&
+      passwordError.trim() === "" &&
+      repeatPassError.trim() === ""
     ) {
-      //
       try {
-        if (!errors.email || !errors.password || !errors.repeat_password) {
-          const response = await api.post(
-            "/auth/signup",
-            {
-              email: form.email,
-              password: form.password,
-            },
-            {
-              withCredentials: true,
-            }
-          );
+        const response = await signupServ(form.email, form.password);
 
-          console.log("signup response", response.data);
-          if (response.data.success) {
-            localStorage.setItem("isLogin", response.data.success);
-            localStorage.setItem("userID", response.data.userId);
+        console.log("singup resp type: ", response);
+        if (response) {
+          const trimmedResponse = response.trim();
+          if (trimmedResponse === "true") {
+            localStorage.setItem("isLogin", trimmedResponse);
+            localStorage.setItem("userID", trimmedResponse);
             window.location.href = "/chat";
+          } else if (trimmedResponse === "taken") {
+            setErrors((prev) => ({ ...prev, email: "Email already taken" }));
           }
         }
       } catch (err: any) {
-        console.error(err.response.data.message);
+        console.error(err);
       }
     }
 

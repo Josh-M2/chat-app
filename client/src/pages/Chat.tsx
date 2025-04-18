@@ -3,21 +3,7 @@ import LogOut from "../components/LogOut";
 import ChatMessage from "../components/ChatMessage";
 import ChatList from "../components/ChatList";
 import api from "../services/api";
-
-export interface Messages {
-  _id: string;
-  isSender: boolean;
-  content: string;
-  timestamp: string;
-  fileUrl?: string;
-}
-
-export interface User {
-  _id: string;
-  email: string;
-  content: Messages[];
-  is_active: boolean;
-}
+import { Messages, User } from "../types/user.types";
 
 const Chat: React.FC = () => {
   const isLogin = localStorage.getItem("isLogin");

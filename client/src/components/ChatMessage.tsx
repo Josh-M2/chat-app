@@ -1,16 +1,6 @@
 // src/components/ChatMessage.tsx
 import React from "react";
-
-export interface ChatMessageProps {
-  message: {
-    _id: string;
-    isSender: boolean;
-    content: string;
-    timestamp: string;
-    fileUrl?: string;
-  };
-  isSender: boolean;
-}
+import { ChatMessageProps } from "../types/ChatComponent.types";
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isSender }) => {
   const { content, fileUrl, timestamp } = message;

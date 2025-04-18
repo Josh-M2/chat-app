@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
-import api from "../services/api.ts";
-
-interface SignupForm {
-  email: string;
-  password: string;
-}
+import { validateEmail, validatePassword } from "../lib/validator.ts";
+import { loginServ } from "../services/loginServ.ts";
+import { LoginForm, SignupForm } from "../types/form.types.ts";
 
 const Login: React.FC = () => {
+  const componentName = "login";
   const isLogin = localStorage.getItem("isLogin");
+
   useEffect(() => {
     isLogin ? (window.location.href = "/chat") : "";
   }, [isLogin]);
 
   const [LogInIsLoading, setSignInIsLoading] = useState<boolean>(false);
-  const [form, setForm] = useState<SignupForm>({
+  const [form, setForm] = useState<LoginForm>({
     email: "",
     password: "",
   });
-  const [errors, setErrors] = useState<SignupForm>({
+  const [errors, setErrors] = useState<LoginForm>({
     email: "",
     password: "",
   });
@@ -28,11 +27,13 @@ const Login: React.FC = () => {
     setForm({ ...form, [name]: value });
     switch (name) {
       case "email":
-        validateEmail(value);
+        const emailError = validateEmail(value);
+        setErrors((prev) => ({ ...prev, email: emailError }));
 
         break;
       case "password":
-        validatePassword(value);
+        const passwordError = validatePassword(value, componentName);
+        setErrors((prev) => ({ ...prev, password: passwordError }));
 
         break;
 
@@ -43,82 +44,36 @@ const Login: React.FC = () => {
 
   const submitLogin = async () => {
     setSignInIsLoading(true);
-    validateEmail(form.email);
-    validatePassword(form.password);
+    const emailError = validateEmail(form.email);
+    const passwordError = validatePassword(form.password, componentName);
 
-    if (!errors.email || !errors.password) {
+    if (emailError.trim() === "" && passwordError.trim() === "") {
       try {
-        if (!errors.email || !errors.password) {
-          const response = await api.post(
-            "/auth/login",
-            {
-              email: form.email,
-              password: form.password,
-            },
-            {
-              withCredentials: true,
-            }
-          );
+        const response = await loginServ(form.email, form.password);
 
-          console.log("Login response", response.data);
-          if (response.data.success) {
-            localStorage.setItem("isLogin", response.data.success);
-            localStorage.setItem("userID", response.data.userId);
+        console.log("Login response", response);
+        if (response) {
+          const trimmedResponse = response.trim();
+
+          if (trimmedResponse === "true") {
+            localStorage.setItem("isLogin", trimmedResponse);
+            localStorage.setItem("userID", trimmedResponse);
             window.location.href = "/chat";
+          } else if (trimmedResponse === "email") {
+            setErrors((prev) => ({ ...prev, email: "Email not found" }));
+          } else if (trimmedResponse === "password") {
+            setErrors((prev) => ({
+              ...prev,
+              password: "Password is incorrect",
+            }));
           }
         }
       } catch (err: any) {
-        console.error(err.response.data.message);
+        console.error(err);
       }
     }
 
     setSignInIsLoading(false);
-  };
-
-  const validateEmail = async (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        email: "Email address is required",
-      }));
-      return;
-    }
-
-    if (!re.test(email)) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        email: "Invalid email address",
-      }));
-      return;
-    }
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      email: "",
-    }));
-  };
-
-  const validatePassword = (password: string) => {
-    if (!password) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        password: "Password is required",
-      }));
-      return;
-    }
-    if (!(password.length >= 12)) {
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        password: "Password must be at least 12 characters",
-      }));
-      return;
-    }
-
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      password: "",
-    }));
   };
 
   return (

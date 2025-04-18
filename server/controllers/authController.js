@@ -11,7 +11,9 @@ export const signUP = async (req, res) => {
   try {
     const existingEmail = await userModel.findOne({ email });
     if (existingEmail) {
-      return res.status(400).json({ message: "Email is already taken" });
+      return res
+        .status(400)
+        .json({ message: { email_taken: "Email is already taken" } });
     }
 
     const newUser = await userModel.create({ email, password });
@@ -46,12 +48,12 @@ export const logIn = async (req, res) => {
   try {
     const existingEmail = await userModel.findOne({ email });
     if (!existingEmail) {
-      return res.status(404).json({ message: "Invalid Email" });
+      return res.status(404).json({ message: { email: "Wrong Email" } });
     }
 
     const isPasswordCorrect = await existingEmail.comparePassword(password);
     if (!isPasswordCorrect) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: { password: "Wrong Password" } });
     }
 
     const TOKEN = process.env.SESSION_TOKEN;

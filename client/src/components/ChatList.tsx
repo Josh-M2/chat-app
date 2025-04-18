@@ -1,22 +1,6 @@
 // src/components/ChatList.tsx
-import React, { useState, useEffect } from "react";
-import api from "../services/api";
-
-export interface Messages {
-  _id: string;
-  isSender: boolean;
-  content: string;
-  timestamp: string;
-  fileUrl?: string;
-}
-
-export interface User {
-  _id: string;
-  email: string;
-  content: Messages[];
-  is_active: boolean;
-}
-
+import React from "react";
+import { ChatListProps } from "../types/ChatComponent.types";
 // export const chatMessages: Messages[] = [
 //   {
 //     id: "1",
@@ -51,14 +35,6 @@ export interface User {
 //   { id: "2", email: "Bob", content: chatMessages, is_active: false },
 //   { id: "3", email: "Charlie", content: chatMessages, is_active: true },
 // ];
-
-interface ChatListProps {
-  onSelectChat: (user: User) => void;
-  selectedChatId: string | null;
-  listOfUsers: User[];
-  loadingListOfUsers: boolean;
-  loggedInUserId: string;
-}
 
 const ChatList: React.FC<ChatListProps> = ({
   onSelectChat,
