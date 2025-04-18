@@ -61,6 +61,7 @@ const Signup: React.FC = () => {
       passwordError.trim() !== "" ||
       repeatPassError.trim() !== ""
     ) {
+      //
       try {
         if (!errors.email || !errors.password || !errors.repeat_password) {
           const response = await api.post(
