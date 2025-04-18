@@ -1,19 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import LogOut from "../components/LogOut";
 import ChatMessage from "../components/ChatMessage";
 import ChatList from "../components/ChatList";
 import api from "../services/api";
 import { Messages, User } from "../types/user.types";
+import { sendMessage } from "../services/chatServ";
+import { socket } from "../lib/socket";
+import { validateToken } from "../services/loginServ";
+import { logout } from "../services/logoutServ";
 
 const Chat: React.FC = () => {
-  const isLogin = localStorage.getItem("isLogin");
-  const loggedInUserId = localStorage.getItem("userID");
+  const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
+  const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
   const [selectedChat, setSelectedChat] = useState<User | null>(null);
   const [listOfUsers, setListOfUsers] = useState<User[]>([]);
   const [loadingListOfUsers, setLoadingListOfUsers] = useState<boolean>(true);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Messages[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
+  const [clickedInput, setClickInput] = useState<boolean>(false);
+  const [autoLogout, setAutoLogout] = useState<boolean>(false);
 
   useEffect(() => {
     setLoadingListOfUsers(true);
@@ -34,6 +40,14 @@ const Chat: React.FC = () => {
     setLoadingListOfUsers(false);
   }, [isLogin]);
 
+  //reset the clickInput Stateshit
+  useEffect(() => {
+    if (clickedInput) {
+      const timer = setTimeout(() => setClickInput(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [clickedInput]);
+
   const handleChatSelect = async (chat: User) => {
     if (chat._id === selectedChat?._id) {
       return;
@@ -48,6 +62,7 @@ const Chat: React.FC = () => {
       const response = await api.get("/chat/get-messages", {
         params: { userId: chat._id, loggedInUserId: loggedInUserId },
       });
+      console.log("loggedInUserIdloggedInUserId", loggedInUserId);
       setMessages(
         response.data.map((msg: any) => ({
           id: msg._id,
@@ -82,16 +97,75 @@ const Chat: React.FC = () => {
     };
 
     try {
-      const response = await api.post("/chat/send-message", newMessage);
+      const response = await sendMessage(newMessage);
+      console.log("response", response);
 
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { ...response.data, isSender: true },
-      ]);
+      if (response) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { ...response, isSender: true },
+        ]);
+      }
 
       setInput(""); // Clear input field
     } catch (error) {
       console.error("Failed to send message:", error);
+    }
+  };
+
+  useEffect(() => {
+    //socket logic lister here
+    if (!socket.connected) socket.connect();
+
+    socket.on("connect", () => {
+      console.log("Socket connected! ID:", socket.id);
+    });
+
+    socket.on("updateChat", (payload) => {
+      if (payload.senderId !== loggedInUserId) {
+        console.log("new message!!: ", payload);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { ...payload, isSender: false },
+        ]);
+      }
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("updateChat");
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const response = await validateToken();
+
+        if (response) {
+          // User is authenticated, continue as normal
+          console.log("response", response);
+          console.log("valid tokens");
+        } else {
+          console.log("invalidtoken");
+          await handlelogOut();
+        }
+      } catch (err) {
+        console.error("Auth validation failed:", err);
+        localStorage.clear();
+        // window.location.href = "/";
+      }
+    };
+
+    checkToken();
+  }, []);
+
+  const handlelogOut = async () => {
+    try {
+      await logout(String(loggedInUserId));
+    } catch (error) {
+      console.error("error logout:", error);
     }
   };
 
@@ -110,34 +184,41 @@ const Chat: React.FC = () => {
 
           <ChatList
             onSelectChat={handleChatSelect}
-            selectedChatId={selectedChat?.email || null}
+            selectedChatId={selectedChat?._id || null}
             listOfUsers={listOfUsers}
+            setListOfUsers={setListOfUsers}
             loadingListOfUsers={loadingListOfUsers}
-            loggedInUserId={loggedInUserId || ""}
+            clickedInput={clickedInput}
           />
           <div className="flex items-stretch flex-col p-3">
-            <LogOut />
+            <LogOut logoutTrigger={handlelogOut} />
           </div>
         </div>
         <div className="flex flex-col h-full w-[600px] border rounded-lg">
-          <div className="p-4 shadow-md min-h-[56px]">
+          <div
+            className="p-4 shadow-md min-h-[56px]"
+            onClick={() => setClickInput(true)}
+          >
             {selectedChat && (
               <div className="flex flex-row items-center gap-3">
                 {selectedChat.email}
                 <span
                   className={`dot h-3 w-3 rounded-full mr-2 ${
-                    selectedChat.is_active ? "bg-green-500" : "bg-gray-500"
+                    selectedChat.isActive ? "bg-green-500" : "bg-gray-500"
                   }`}
                 ></span>
               </div>
             )}
           </div>
-          <div className="overflow-y-auto px-4 h-[410px] overflow-auto">
+          <div
+            className="overflow-y-auto px-4 h-[410px] overflow-auto"
+            onClick={() => setClickInput(true)}
+          >
             {loadingMessages
               ? "loading"
-              : messages.map((msg) => (
+              : messages.map((msg, index) => (
                   <ChatMessage
-                    key={msg._id}
+                    key={index}
                     message={msg}
                     isSender={msg.isSender}
                   />
@@ -149,7 +230,11 @@ const Chat: React.FC = () => {
               placeholder="Type your message..."
               className="flex-1 p-2 border rounded-md"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setClickInput(true);
+              }}
+              onClick={() => setClickInput(true)}
             />
             <button
               type="submit"

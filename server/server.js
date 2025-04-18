@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import threadRoutes from "./routes/threadRoutes.js";
 import dotEnv from "dotenv";
 import cookieParser from "cookie-parser";
+import { corsOption } from "./config/cors.js";
 
 dotEnv.config();
 const app = express();
@@ -16,16 +17,13 @@ const io = new Server(server, {
 });
 const PORT = process.env.PORT || 5000;
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  })
-);
+app.use(cors(corsOption));
 app.use(express.json());
 app.use(cookieParser());
 
 connectDB();
+
+app.set("socket", io);
 
 // Routes
 app.use("/api/auth", authRoutes);

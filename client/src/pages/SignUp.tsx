@@ -7,6 +7,8 @@ import {
 } from "../lib/validator.ts";
 import { signupServ } from "../services/signupServ.ts";
 import { SignupForm } from "../types/form.types.ts";
+import eyeopen from "./../assets/eye-regular.svg";
+import eyeclose from "./../assets/eye-slash-regular.svg";
 
 const Signup: React.FC = () => {
   const componentName = "signup";
@@ -22,6 +24,8 @@ const Signup: React.FC = () => {
     password: "",
     repeat_password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordRepeat, setShowPasswordRepeat] = useState(false);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -150,19 +154,30 @@ const Signup: React.FC = () => {
                   Password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
-                  className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border py-1.5 pr-[45px] text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
                     errors.password
                       ? "border-rose-600 ring-rose-600"
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPassword ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.password && (
@@ -184,19 +199,30 @@ const Signup: React.FC = () => {
                   Repeat password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="repeat_password"
                   name="repeat_password"
-                  type="password"
+                  type={showPasswordRepeat ? "text" : "password"}
                   value={form.repeat_password}
                   onChange={handleChange}
-                  className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border py-1.5 pr-[45px] text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
                     errors.repeat_password
                       ? "border-rose-600 ring-rose-600"
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordRepeat(!showPasswordRepeat)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPasswordRepeat ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.repeat_password && (

@@ -1,3 +1,5 @@
+import { logout } from "../services/logoutServ";
+
 export type Messages = {
   _id: string;
   isSender: boolean;
@@ -10,5 +12,9 @@ export type User = {
   _id: string;
   email: string;
   content: Messages[];
-  is_active: boolean;
+  isActive: boolean;
+};
+
+export type logoutProps = {
+  logoutTrigger: () => void;
 };

@@ -8,3 +8,10 @@ export type LoginForm = {
   email: string;
   password: string;
 };
+
+export type successfulLogin = {
+  success: boolean;
+  userId?: string;
+  emailError?: string;
+  passwordError?: string;
+};

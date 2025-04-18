@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
 import { validateEmail, validatePassword } from "../lib/validator.ts";
 import { loginServ } from "../services/loginServ.ts";
-import { LoginForm, SignupForm } from "../types/form.types.ts";
+import { LoginForm } from "../types/form.types.ts";
+import eyeopen from "./../assets/eye-regular.svg";
+import eyeclose from "./../assets/eye-slash-regular.svg";
 
 const Login: React.FC = () => {
   const componentName = "login";
   const isLogin = localStorage.getItem("isLogin");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     isLogin ? (window.location.href = "/chat") : "";
@@ -53,15 +56,16 @@ const Login: React.FC = () => {
 
         console.log("Login response", response);
         if (response) {
-          const trimmedResponse = response.trim();
-
-          if (trimmedResponse === "true") {
-            localStorage.setItem("isLogin", trimmedResponse);
-            localStorage.setItem("userID", trimmedResponse);
+          if (response.success) {
+            localStorage.setItem("isLogin", String(response.success));
+            localStorage.setItem(
+              "userID",
+              response.userId ? response.userId : ""
+            );
             window.location.href = "/chat";
-          } else if (trimmedResponse === "email") {
+          } else if (response.emailError) {
             setErrors((prev) => ({ ...prev, email: "Email not found" }));
-          } else if (trimmedResponse === "password") {
+          } else if (response.passwordError) {
             setErrors((prev) => ({
               ...prev,
               password: "Password is incorrect",
@@ -132,11 +136,11 @@ const Login: React.FC = () => {
                   Password
                 </label>
               </div>
-              <div className="mt-2">
+              <div className="relative mt-2">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
                   className={`block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${
@@ -145,6 +149,17 @@ const Login: React.FC = () => {
                       : "border-gray-300 ring-gray-300"
                   }`}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 bg-transparent"
+                >
+                  <img
+                    src={showPassword ? eyeopen : eyeclose}
+                    alt="toggle visibility"
+                    className="w-5 h-5"
+                  />
+                </button>
               </div>
             </div>
             {errors.password && (

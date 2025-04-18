@@ -1,19 +1,10 @@
-import React from "react";
-import api from "../services/api";
+import React, { useMemo } from "react";
+import { logoutProps } from "../types/user.types";
 
-const LogOut: React.FC = () => {
-  const logOut = async () => {
-    try {
-      await api.post("/auth/logout", {}, { withCredentials: true });
-      localStorage.removeItem("isLogin");
-      window.location.href = "/";
-    } catch (error) {
-      console.error("error logout:", error);
-    }
-  };
+const LogOut: React.FC<logoutProps> = ({ logoutTrigger }) => {
   return (
     <>
-      <button onClick={logOut} className="m-2 border border-slate-400">
+      <button onClick={logoutTrigger} className="m-2 border border-slate-400">
         Log Out
       </button>
     </>

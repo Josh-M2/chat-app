@@ -4,8 +4,9 @@ export type ChatListProps = {
   onSelectChat: (user: User) => void;
   selectedChatId: string | null;
   listOfUsers: User[];
+  setListOfUsers: React.Dispatch<React.SetStateAction<User[]>>;
   loadingListOfUsers: boolean;
-  loggedInUserId: string;
+  clickedInput?: boolean;
 };
 
 export type ChatMessageProps = {
@@ -17,4 +18,11 @@ export type ChatMessageProps = {
     fileUrl?: string;
   };
   isSender: boolean;
+};
+
+export type SendChatTypes = {
+  senderId: string | null;
+  receiverId: string;
+  content: string;
+  fileUrl: string;
 };
