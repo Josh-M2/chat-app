@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
 import {
   validateEmail,
@@ -9,10 +9,15 @@ import { signupServ } from "../services/signupServ.ts";
 import { SignupForm } from "../types/form.types.ts";
 import eyeopen from "./../assets/eye-regular.svg";
 import eyeclose from "./../assets/eye-slash-regular.svg";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Signup: React.FC = () => {
   const componentName = "signup";
-  const isLogin = localStorage.getItem("isLogin");
+  const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
+  const reCaptchaSiteKey = useMemo(
+    () => import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+    []
+  );
   const [signUpIsLoading, setSignUpIsLoading] = useState<boolean>(false);
   const [form, setForm] = useState<SignupForm>({
     email: "",
@@ -26,6 +31,15 @@ const Signup: React.FC = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordRepeat, setShowPasswordRepeat] = useState(false);
+
+  const [errorsMain, setErrorsMain] = useState("");
+
+  const [showCaptcha, setShowCaptcha] = useState(true);
+  const [captchaToken, setCaptchaToken] = useState<string | null>("");
+
+  const handleCaptcha = (token: string | null) => {
+    setCaptchaToken(token);
+  };
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,7 +74,6 @@ const Signup: React.FC = () => {
   const submitSignUP = async () => {
     console.log("clicked");
 
-    setSignUpIsLoading(true);
     const emailerror = validateEmail(form.email);
     const passwordError = validatePassword(form.password, componentName);
     const repeatPassError = validateRepeatPassword(
@@ -72,23 +85,38 @@ const Signup: React.FC = () => {
       passwordError.trim() === "" &&
       repeatPassError.trim() === ""
     ) {
+      if (!captchaToken) {
+        setErrorsMain("Please verify the captcha first");
+        return;
+      } else {
+        setErrorsMain("");
+      }
+      setSignUpIsLoading(true);
       try {
-        const response = await signupServ(form.email, form.password);
+        const response = await signupServ(
+          form.email,
+          form.password,
+          captchaToken || ""
+        );
 
         console.log("singup resp type: ", response);
-        if (response) {
-          const trimmedResponse = response.trim();
-          if (trimmedResponse === "true") {
-            localStorage.setItem("isLogin", trimmedResponse);
-            localStorage.setItem("userID", trimmedResponse);
-            window.location.href = "/chat";
-          } else if (trimmedResponse === "taken") {
-            setErrors((prev) => ({ ...prev, email: "Email already taken" }));
-          }
+
+        if (response?.success) {
+          localStorage.setItem("isLogin", String(response.success));
+          localStorage.setItem("userID", response.userId as string);
+          window.location.href = "/chat";
+        } else if (response?.email_taken) {
+          setErrors((prev) => ({ ...prev, email: "Email already taken" }));
         }
       } catch (err: any) {
         console.error(err);
       }
+    } else {
+      setErrors({
+        email: emailerror,
+        password: passwordError,
+        repeat_password: repeatPassError,
+      });
     }
 
     setSignUpIsLoading(false);
@@ -112,6 +140,16 @@ const Signup: React.FC = () => {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form onSubmit={submitSignUP} className="space-y-6">
+            {errorsMain && (
+              <label className="text-[rgb(218,44,44)] !mt-0 text-[13px] flex items-center">
+                <img
+                  src={errorImage}
+                  alt="error exclamatory"
+                  className="max-w-[5%] mr-1"
+                />
+                {errorsMain}
+              </label>
+            )}
             <div>
               <label
                 htmlFor="email"
@@ -236,6 +274,15 @@ const Signup: React.FC = () => {
               </label>
             )}
 
+            <div className="flex flex-col items-center">
+              {showCaptcha && (
+                <ReCAPTCHA
+                  sitekey={reCaptchaSiteKey!}
+                  onChange={handleCaptcha}
+                />
+              )}
+            </div>
+
             <div>
               <button
                 type="button"
@@ -244,6 +291,7 @@ const Signup: React.FC = () => {
                   e.preventDefault();
                   submitSignUP();
                 }}
+                disabled={signUpIsLoading}
               >
                 {signUpIsLoading ? "Signing up" : "Sign up"}
               </button>

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import errorImage from "/src/assets/circle-exclamation-solid.svg";
 import { validateEmail, validatePassword } from "../lib/validator.ts";
 import { loginServ } from "../services/loginServ.ts";
 import { LoginForm } from "../types/form.types.ts";
 import eyeopen from "./../assets/eye-regular.svg";
 import eyeclose from "./../assets/eye-slash-regular.svg";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Login: React.FC = () => {
   const componentName = "login";
-  const isLogin = localStorage.getItem("isLogin");
+  const reCaptchaSiteKey = useMemo(
+    () => import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+    []
+  );
+  const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    isLogin ? (window.location.href = "/chat") : "";
-  }, [isLogin]);
-
   const [LogInIsLoading, setSignInIsLoading] = useState<boolean>(false);
   const [form, setForm] = useState<LoginForm>({
     email: "",
@@ -24,6 +24,15 @@ const Login: React.FC = () => {
     email: "",
     password: "",
   });
+
+  const [errorsMain, setErrorsMain] = useState("");
+
+  const [showCaptcha, setShowCaptcha] = useState(true);
+  const [captchaToken, setCaptchaToken] = useState<string | null>("");
+
+  const handleCaptcha = (token: string | null) => {
+    setCaptchaToken(token);
+  };
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,22 +55,32 @@ const Login: React.FC = () => {
   };
 
   const submitLogin = async () => {
-    setSignInIsLoading(true);
+    console.log("clicked");
+
     const emailError = validateEmail(form.email);
     const passwordError = validatePassword(form.password, componentName);
 
     if (emailError.trim() === "" && passwordError.trim() === "") {
+      if (!captchaToken) {
+        setErrorsMain("Please verify the captcha first");
+        return;
+      } else {
+        setErrorsMain("");
+      }
+      setSignInIsLoading(true);
       try {
-        const response = await loginServ(form.email, form.password);
+        const response = await loginServ(
+          form.email,
+          form.password,
+          captchaToken || ""
+        );
 
         console.log("Login response", response);
         if (response) {
           if (response.success) {
             localStorage.setItem("isLogin", String(response.success));
-            localStorage.setItem(
-              "userID",
-              response.userId ? response.userId : ""
-            );
+            localStorage.setItem("userID", response.userId as string);
+            localStorage.removeItem("_grecaptcha");
             window.location.href = "/chat";
           } else if (response.emailError) {
             setErrors((prev) => ({ ...prev, email: "Email not found" }));
@@ -70,15 +89,28 @@ const Login: React.FC = () => {
               ...prev,
               password: "Password is incorrect",
             }));
+          } else if (response.limiter) {
+            setErrorsMain(response.limiter);
+            console.log("response.requiresCaptcha", response.requiresCaptcha);
+            setShowCaptcha(response.requiresCaptcha as boolean);
           }
         }
       } catch (err: any) {
         console.error(err);
       }
+    } else {
+      setErrors({
+        email: emailError,
+        password: passwordError,
+      });
     }
 
     setSignInIsLoading(false);
   };
+
+  useEffect(() => {
+    isLogin ? (window.location.href = "/chat") : "";
+  }, [isLogin]);
 
   return (
     <>
@@ -94,6 +126,16 @@ const Login: React.FC = () => {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form onSubmit={submitLogin} className="space-y-6">
+            {errorsMain && (
+              <label className="text-[rgb(218,44,44)] !mt-0 text-[13px] flex items-center">
+                <img
+                  src={errorImage}
+                  alt="error exclamatory"
+                  className="max-w-[5%] mr-1"
+                />
+                {errorsMain}
+              </label>
+            )}
             <div>
               <label
                 htmlFor="email"
@@ -172,6 +214,14 @@ const Login: React.FC = () => {
                 {errors.password}
               </label>
             )}
+            <div className="flex flex-col items-center">
+              {showCaptcha && (
+                <ReCAPTCHA
+                  sitekey={reCaptchaSiteKey!}
+                  onChange={handleCaptcha}
+                />
+              )}
+            </div>
 
             <div>
               <button
@@ -181,6 +231,7 @@ const Login: React.FC = () => {
                   e.preventDefault();
                   submitLogin();
                 }}
+                disabled={LogInIsLoading}
               >
                 {LogInIsLoading ? "Signing in" : "Sign in"}
               </button>

@@ -1,13 +1,19 @@
 import userModel from "../models/userModel.js";
 import dotEnv from "dotenv";
 import jwt from "jsonwebtoken";
+import { handleCaptcha, verifyRecaptcha } from "../lib/reCaptcha.js";
+import { inputValidator } from "../lib/validator.js";
+import { generateAndSetToken } from "../lib/authenthicateUser.js";
 
 dotEnv.config();
-
 export const signUP = async (req, res) => {
-  const { email, password } = req.body;
-  console.log("email", email);
-  console.log("password", password);
+  const socket = req.app.get("socket");
+
+  const { email, password, captchaToken } = req.body;
+
+  const validationError = inputValidator(email, password);
+  if (validationError)
+    return res.status(400).json({ message: validationError });
 
   try {
     const existingEmail = await userModel.findOne({ email });
@@ -17,93 +23,77 @@ export const signUP = async (req, res) => {
         .json({ message: { email_taken: "Email is already taken" } });
     }
 
+    await handleCaptcha(req, captchaToken, res);
+
     const newUser = await userModel.create({ email, password });
-    console.log("newUser", newUser);
-
-    const NODE_ENV = process.env.NODE_ENV;
-    const token = process.env.SESSION_TOKEN;
-    const tokenExpiry = process.env.SESSION_EXPIRY;
-
     if (newUser) {
-      const TOKEN = jwt.sign({ id: newUser._id, email: newUser.email }, token, {
-        expiresIn: tokenExpiry,
-      });
-      console.log("TOKEN", TOKEN);
-      res.cookie("accessToken", TOKEN, {
-        httpOnly: true,
-        secure: NODE_ENV === "development", // Set to true in production (for HTTPS)
-        sameSite: "Strict",
-        maxAge: tokenExpiry,
-      });
+      const token = generateAndSetToken(newUser, res);
       res.status(200).json({
-        message: "Succesfully registered",
+        message: "Successfully registered",
         success: true,
         userId: newUser._id,
+      });
+
+      const updatedUser = await userModel.findByIdAndUpdate(
+        newUser._id,
+        { isActive: true },
+        { new: true }
+      );
+
+      socket.emit("updateChatList", {
+        userID: updatedUser._id,
+        isActive: updatedUser.isActive,
       });
     }
   } catch (err) {
     console.error("signup error", err);
-    res.status(500).json({ message: "Error registering user" });
+    res.status(500).json({ message: "Error creat user" });
   }
 };
-
 export const logIn = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, captchaToken } = req.body;
   const socket = req.app.get("socket");
-  console.log("email", email);
-  console.log("password", password);
+
+  const validationError = inputValidator(email, password);
+  if (validationError)
+    return res.status(400).json({ message: validationError });
 
   try {
-    const existingEmail = await userModel.findOne({ email });
-    if (!existingEmail) {
+    const existingUser = await userModel.findOne({ email });
+    if (!existingUser) {
       return res.status(404).json({ message: { emailError: "Wrong Email" } });
     }
 
-    const isPasswordCorrect = await existingEmail.comparePassword(password);
+    const isPasswordCorrect = await existingUser.comparePassword(password);
     if (!isPasswordCorrect) {
       return res
         .status(400)
         .json({ message: { passwordError: "Wrong Password" } });
     }
-    console.log("existingEmail", existingEmail);
 
-    const NODE_ENV = process.env.NODE_ENV;
-    const token = process.env.SESSION_TOKEN;
-    const tokenExpiry = process.env.SESSION_EXPIRY;
+    await handleCaptcha(req, captchaToken, res);
 
-    const TOKEN = jwt.sign(
-      { id: existingEmail._id, email: existingEmail.email },
-      token,
-      { expiresIn: tokenExpiry }
-    );
-    console.log("TOKEN", TOKEN);
-
-    res.cookie("accessToken", TOKEN, {
-      httpOnly: true,
-      secure: NODE_ENV === "development",
-      sameSite: "strict",
-      maxAge: tokenExpiry,
-    });
+    const token = generateAndSetToken(existingUser, res);
 
     res.status(200).json({
-      message: "Succesfully Login",
+      message: "Successfully Logged In",
       success: true,
-      userId: existingEmail._id,
+      userId: existingUser._id,
     });
 
-    const response = await userModel.findByIdAndUpdate(
-      existingEmail._id,
+    const updatedUser = await userModel.findByIdAndUpdate(
+      existingUser._id,
       { isActive: true },
       { new: true }
     );
 
     socket.emit("updateChatList", {
-      userID: response._id,
-      isActive: response.isActive,
+      userID: updatedUser._id,
+      isActive: updatedUser.isActive,
     });
   } catch (err) {
-    console.error("signup error", err);
-    res.status(500).json({ message: "Error Login user" });
+    console.error("login error", err);
+    res.status(500).json({ message: "Error logging in user" });
   }
 };
 

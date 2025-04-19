@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import LogOut from "../components/LogOut";
 import ChatMessage from "../components/ChatMessage";
 import ChatList from "../components/ChatList";
-import api from "../services/api";
 import { User } from "../types/user.types";
 import {
   getSelectedChatMessages,
@@ -146,6 +145,7 @@ const Chat: React.FC = () => {
 
   const handlelogOut = async () => {
     try {
+      console.log("loggedInUserId", loggedInUserId);
       await logout(String(loggedInUserId));
     } catch (error) {
       console.error("error logout:", error);

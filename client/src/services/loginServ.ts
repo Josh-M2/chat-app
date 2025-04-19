@@ -3,7 +3,8 @@ import axiosInst from "./api";
 
 export const loginServ = async (
   email: string,
-  password: string
+  password: string,
+  captchaToken: string
 ): Promise<successfulLogin | null> => {
   try {
     console.log("email", email);
@@ -12,6 +13,7 @@ export const loginServ = async (
       {
         email: email,
         password: password,
+        captchaToken: captchaToken,
       },
       {
         withCredentials: true,
@@ -30,6 +32,10 @@ export const loginServ = async (
     }
     if (error.status === 400 && error.response.data.message.passwordError) {
       console.log("error", error.response.data.message.passwordError);
+      return error.response.data.message;
+    }
+    if (error.status === 429 && error.response.data.message.limiter) {
+      console.log("error", error.response.data.message.limiter);
       return error.response.data.message;
     }
 

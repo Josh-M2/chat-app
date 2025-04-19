@@ -14,4 +14,7 @@ export type successfulLogin = {
   userId?: string;
   emailError?: string;
   passwordError?: string;
+  limiter?: string;
+  requiresCaptcha?: boolean;
+  email_taken?: string;
 };

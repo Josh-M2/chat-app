@@ -1,4 +1,3 @@
-import { logout } from "../services/logoutServ";
 import { Messages } from "./chatComponent.types";
 
 export type User = {
