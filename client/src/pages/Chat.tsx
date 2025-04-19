@@ -3,11 +3,16 @@ import LogOut from "../components/LogOut";
 import ChatMessage from "../components/ChatMessage";
 import ChatList from "../components/ChatList";
 import api from "../services/api";
-import { Messages, User } from "../types/user.types";
-import { sendMessage } from "../services/chatServ";
+import { User } from "../types/user.types";
+import {
+  getSelectedChatMessages,
+  getUser,
+  sendMessage,
+} from "../services/chatServ";
 import { socket } from "../lib/socket";
-import { validateToken } from "../services/loginServ";
+// import { validateToken } from "../services/loginServ";
 import { logout } from "../services/logoutServ";
+import { Messages } from "../types/chatComponent.types";
 
 const Chat: React.FC = () => {
   const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
@@ -19,7 +24,6 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Messages[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [clickedInput, setClickInput] = useState<boolean>(false);
-  const [autoLogout, setAutoLogout] = useState<boolean>(false);
 
   useEffect(() => {
     setLoadingListOfUsers(true);
@@ -28,9 +32,12 @@ const Chat: React.FC = () => {
     } else {
       const fetchUsers = async () => {
         try {
-          const response = await api.get("/chat/get-user");
-
-          setListOfUsers(response.data);
+          const response = await getUser();
+          if (typeof response === "number" && response === 401) {
+            await handlelogOut();
+          } else {
+            setListOfUsers(response);
+          }
         } catch (error) {
           console.error("Failed to fetch users:", error);
         }
@@ -48,73 +55,7 @@ const Chat: React.FC = () => {
     }
   }, [clickedInput]);
 
-  const handleChatSelect = async (chat: User) => {
-    if (chat._id === selectedChat?._id) {
-      return;
-    }
-
-    setSelectedChat(chat);
-    setLoadingMessages(true);
-
-    console.log("chat.id", chat._id);
-
-    try {
-      const response = await api.get("/chat/get-messages", {
-        params: { userId: chat._id, loggedInUserId: loggedInUserId },
-      });
-      console.log("loggedInUserIdloggedInUserId", loggedInUserId);
-      setMessages(
-        response.data.map((msg: any) => ({
-          id: msg._id,
-          isSender: msg.senderId === loggedInUserId,
-          content: msg.content,
-          timestamp: msg.timestamp,
-          fileUrl: msg.fileUrl,
-        }))
-      );
-    } catch (error) {
-      console.error("Failed to fetch messages:", error);
-    }
-    setLoadingMessages(false);
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("inputed", input);
-
-    if (!input.trim() || !selectedChat) return;
-
-    // const highestId = chat.messages.reduce(
-    //   (maxId, message) => Math.max(maxId, message.id),
-    //   0
-    // );
-
-    const newMessage = {
-      senderId: loggedInUserId,
-      receiverId: selectedChat._id,
-      content: input,
-      fileUrl: "", // Adjust if you want to handle files
-    };
-
-    try {
-      const response = await sendMessage(newMessage);
-      console.log("response", response);
-
-      if (response) {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { ...response, isSender: true },
-        ]);
-      }
-
-      setInput(""); // Clear input field
-    } catch (error) {
-      console.error("Failed to send message:", error);
-    }
-  };
-
   useEffect(() => {
-    //socket logic lister here
     if (!socket.connected) socket.connect();
 
     socket.on("connect", () => {
@@ -137,29 +78,71 @@ const Chat: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const checkToken = async () => {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        const response = await validateToken();
+  const handleChatSelect = async (chat: User) => {
+    if (chat._id === selectedChat?._id) {
+      return;
+    }
 
-        if (response) {
-          // User is authenticated, continue as normal
-          console.log("response", response);
-          console.log("valid tokens");
-        } else {
-          console.log("invalidtoken");
-          await handlelogOut();
-        }
-      } catch (err) {
-        console.error("Auth validation failed:", err);
-        localStorage.clear();
-        // window.location.href = "/";
+    setSelectedChat(chat);
+    setLoadingMessages(true);
+
+    console.log("chat.id", chat._id);
+
+    try {
+      const response = await getSelectedChatMessages(
+        chat._id,
+        loggedInUserId as string
+      );
+      console.log("handleChatSelect response", response);
+
+      if (typeof response === "number" && response === 401) {
+        await handlelogOut();
+      } else {
+        setMessages(
+          response.map((msg: Messages) => ({
+            _id: msg._id,
+            isSender: msg.senderId === loggedInUserId,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            fileUrl: msg.fileUrl,
+          }))
+        );
       }
+    } catch (error) {
+      console.error("Failed to fetch messages:", error);
+    }
+    setLoadingMessages(false);
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("inputed", input);
+
+    if (!input.trim() || !selectedChat) return;
+
+    const newMessage = {
+      senderId: loggedInUserId,
+      receiverId: selectedChat._id,
+      content: input,
+      fileUrl: "",
     };
 
-    checkToken();
-  }, []);
+    try {
+      const response = await sendMessage(newMessage);
+      console.log("response", response);
+
+      if (response) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { ...response, isSender: true },
+        ]);
+      }
+
+      setInput(""); // Clear input field
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
+  };
 
   const handlelogOut = async () => {
     try {

@@ -11,6 +11,6 @@ const router = express.Router();
 router.post("/signup", signUP);
 router.post("/login", logIn);
 router.post("/logout", logOut);
-router.get("/validate-token", validateToken);
+// router.get("/validate-token", validateToken);
 
 export default router;

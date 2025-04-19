@@ -38,17 +38,17 @@ export const loginServ = async (
   return null;
 };
 
-export const validateToken = async () => {
-  try {
-    const response = await axiosInst.get("/auth/validate-token", {
-      withCredentials: true,
-    });
-    if (response) {
-      console.log(response.data);
-      return response.data;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-  return null;
-};
+// export const validateToken = async () => {
+//   try {
+//     const response = await axiosInst.get("/auth/validate-token", {
+//       withCredentials: true,
+//     });
+//     if (response) {
+//       console.log(response.data);
+//       return response.data;
+//     }
+//   } catch (error) {
+//     console.error(error);
+//   }
+//   return null;
+// };

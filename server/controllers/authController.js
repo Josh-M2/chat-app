@@ -22,16 +22,18 @@ export const signUP = async (req, res) => {
 
     const NODE_ENV = process.env.NODE_ENV;
     const token = process.env.SESSION_TOKEN;
+    const tokenExpiry = process.env.SESSION_EXPIRY;
+
     if (newUser) {
       const TOKEN = jwt.sign({ id: newUser._id, email: newUser.email }, token, {
-        expiresIn: "9h",
+        expiresIn: tokenExpiry,
       });
       console.log("TOKEN", TOKEN);
       res.cookie("accessToken", TOKEN, {
         httpOnly: true,
         secure: NODE_ENV === "development", // Set to true in production (for HTTPS)
         sameSite: "Strict",
-        maxAge: 32400000,
+        maxAge: tokenExpiry,
       });
       res.status(200).json({
         message: "Succesfully registered",
@@ -67,11 +69,12 @@ export const logIn = async (req, res) => {
 
     const NODE_ENV = process.env.NODE_ENV;
     const token = process.env.SESSION_TOKEN;
+    const tokenExpiry = process.env.SESSION_EXPIRY;
 
     const TOKEN = jwt.sign(
       { id: existingEmail._id, email: existingEmail.email },
       token,
-      { expiresIn: "9h" }
+      { expiresIn: tokenExpiry }
     );
     console.log("TOKEN", TOKEN);
 
@@ -79,7 +82,7 @@ export const logIn = async (req, res) => {
       httpOnly: true,
       secure: NODE_ENV === "development",
       sameSite: "strict",
-      maxAge: 32400000,
+      maxAge: tokenExpiry,
     });
 
     res.status(200).json({
@@ -106,14 +109,14 @@ export const logIn = async (req, res) => {
 
 export const validateToken = async (req, res) => {
   const token = req.cookies.accessToken;
-  const jwtSecret = process.env.SESSION_TOKEN;
+  const userAuthSessionToken = process.env.SESSION_TOKEN;
 
   if (!token) {
     return res.status(401).json({ message: "No token" });
   }
 
   try {
-    const decoded = jwt.verify(token, jwtSecret);
+    const decoded = jwt.verify(token, userAuthSessionToken);
     res.json({ isValid: true, user: decoded.id });
   } catch (err) {
     res.status(401).json({ isValid: false });

@@ -26,3 +26,12 @@ export type SendChatTypes = {
   content: string;
   fileUrl: string;
 };
+
+export type Messages = {
+  _id: string;
+  isSender: boolean;
+  content: string;
+  timestamp: string;
+  senderId?: string;
+  fileUrl?: string;
+};

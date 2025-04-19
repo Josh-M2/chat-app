@@ -5,6 +5,7 @@ import userModel from "../models/userModel.js";
 
 export const getUser = async (req, res) => {
   const users = await userModel.find().select("email isActive");
+
   if (users.length > 1) {
     res.status(200).json(users);
   } else {

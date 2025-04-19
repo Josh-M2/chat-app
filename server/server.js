@@ -8,13 +8,12 @@ import threadRoutes from "./routes/threadRoutes.js";
 import dotEnv from "dotenv";
 import cookieParser from "cookie-parser";
 import { corsOption } from "./config/cors.js";
+import { initServer } from "./config/socketIO.js";
 
 dotEnv.config();
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: process.env.CLIENT_URL, credentials: true },
-});
+const io = initServer(server);
 const PORT = process.env.PORT || 5000;
 
 app.use(cors(corsOption));
@@ -28,14 +27,5 @@ app.set("socket", io);
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", threadRoutes);
-
-// Socket.io Setup
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
