@@ -18,12 +18,14 @@ import clipSVG from "../assets/clip.svg";
 import iconSVG from "../assets/emoji.svg";
 
 import { upload } from "../services/upload";
+import { searchUser } from "../lib/sort";
 
 const Chat: React.FC = () => {
   const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
   const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
   const [selectedChat, setSelectedChat] = useState<User | null>(null);
   const [listOfUsers, setListOfUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loadingListOfUsers, setLoadingListOfUsers] = useState<boolean>(true);
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Messages[]>([]);
@@ -36,6 +38,7 @@ const Chat: React.FC = () => {
   const [selectedFile, setselectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState<string>("");
 
   useEffect(() => {
     setLoadingListOfUsers(true);
@@ -48,8 +51,8 @@ const Chat: React.FC = () => {
           if (typeof response === "number" && response === 401) {
             await handlelogOut();
           } else {
-            setSelectedChat(response[0]);
             setListOfUsers(response);
+            setFilteredUsers(response);
           }
         } catch (error) {
           console.error("Failed to fetch users:", error);
@@ -258,6 +261,13 @@ const Chat: React.FC = () => {
       setPreviewUrl(null);
     }
   };
+
+  useEffect(() => {
+    console.log(search);
+    const response = searchUser(search, listOfUsers);
+    console.log("search response: ", response);
+    setFilteredUsers(response as User[]);
+  }, [search]);
   return (
     <>
       <div className="flex items-end rounded-lg gap-3">
@@ -266,16 +276,19 @@ const Chat: React.FC = () => {
             <h2>Chats</h2>
             <input
               type="text"
+              name="search"
+              value={search}
               placeholder="Search here"
               className="block w-full rounded-md border py-1.5 text-gray-900 shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 mt-3"
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
           <ChatList
             onSelectChat={handleChatSelect}
             selectedChatId={selectedChat?._id || null}
-            listOfUsers={listOfUsers}
-            setListOfUsers={setListOfUsers}
+            listOfUsers={filteredUsers}
+            setListOfUsers={setFilteredUsers}
             loadingListOfUsers={loadingListOfUsers}
             clickedInput={clickedInput}
           />
