@@ -387,9 +387,9 @@ const Chat: React.FC = () => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-2 bg-transparent rounded mr-1"
+                className="p-2 bg-transparent rounded mr-1 hover:bg-blue-100 hover:scale-105 transition-all duration-200"
               >
-                <img src={clipSVG} alt="attach file" className="w-5 h-5 " />
+                <img src={clipSVG} alt="attach file" className="w-5 h-5" />
               </button>
             </div>
             <input
@@ -409,9 +409,9 @@ const Chat: React.FC = () => {
               <button
                 type="button"
                 onClick={toggleEmojiPicker}
-                className="ml-2 p-2 bg-transparent text-white rounded-md"
+                className="ml-2 p-2 bg-transparent text-white rounded-md hover:bg-blue-100 hover:scale-105 transition-all duration-200"
               >
-                <img src={iconSVG} alt="emojis" className="w-5 h-5 " />
+                <img src={iconSVG} alt="emojis" className="w-5 h-5" />
               </button>
 
               {showEmojiPicker && (
@@ -426,10 +426,15 @@ const Chat: React.FC = () => {
 
             <button
               type="submit"
-              className="ml-2 p-2 bg-blue-500 text-white rounded-md"
+              className={`ml-2 p-2 rounded-md transition-colors duration-200
+                        ${
+                          sending
+                            ? "bg-blue-300 cursor-not-allowed"
+                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                        }`}
               disabled={sending}
             >
-              Send
+              {sending ? "Sending..." : "Send"}
             </button>
           </form>
         </div>
