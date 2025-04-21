@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import LogOut from "../components/LogOut";
 import ChatMessage from "../components/ChatMessage";
 import ChatList from "../components/ChatList";
@@ -12,17 +12,29 @@ import { socket } from "../lib/socket";
 // import { validateToken } from "../services/loginServ";
 import { logout } from "../services/logoutServ";
 import { Messages } from "../types/chatComponent.types";
+import EmojiPicker from "emoji-picker-react";
+import fileSVG from "../assets/file.svg";
+import clipSVG from "../assets/clip.svg";
+import iconSVG from "../assets/emoji.svg";
 
 const Chat: React.FC = () => {
+  const cloudName = useMemo(() => import.meta.env.VITE_CLOUDINARY_NAME, []);
   const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
   const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
   const [selectedChat, setSelectedChat] = useState<User | null>(null);
   const [listOfUsers, setListOfUsers] = useState<User[]>([]);
   const [loadingListOfUsers, setLoadingListOfUsers] = useState<boolean>(true);
-  const [input, setInput] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<Messages[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [clickedInput, setClickInput] = useState<boolean>(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
+  const emojiButtonRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setselectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     setLoadingListOfUsers(true);
@@ -35,6 +47,7 @@ const Chat: React.FC = () => {
           if (typeof response === "number" && response === 401) {
             await handlelogOut();
           } else {
+            setSelectedChat(response[0]);
             setListOfUsers(response);
           }
         } catch (error) {
@@ -83,6 +96,8 @@ const Chat: React.FC = () => {
     }
 
     setSelectedChat(chat);
+    setInputValue("");
+    setselectedFile(null);
     setLoadingMessages(true);
 
     console.log("chat.id", chat._id);
@@ -115,21 +130,52 @@ const Chat: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("inputed", input);
+    if (!inputValue.trim() && !selectedFile) return;
+    if (!selectedChat) return;
 
-    if (!input.trim() || !selectedChat) return;
+    setSending(true);
+    let fileUrl = "";
+    let fileType = "";
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("upload_preset", "chatapp-preset");
+
+      try {
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        const data = await res.json();
+        if (data.secure_url) {
+          fileUrl = data.secure_url;
+          fileType = data.resource_type;
+        } else {
+          throw new Error("Upload failed");
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert("File upload failed.");
+        setSending(false);
+        return;
+      }
+    }
 
     const newMessage = {
       senderId: loggedInUserId,
       receiverId: selectedChat._id,
-      content: input,
-      fileUrl: "",
+      content: inputValue,
+      fileUrl: fileUrl,
+      fileType: fileType,
     };
 
     try {
       const response = await sendMessage(newMessage);
-      console.log("response", response);
-
       if (response) {
         setMessages((prevMessages) => [
           ...prevMessages,
@@ -137,10 +183,14 @@ const Chat: React.FC = () => {
         ]);
       }
 
-      setInput(""); // Clear input field
+      setInputValue("");
+      setselectedFile(null);
+      setPreviewUrl(null);
     } catch (error) {
       console.error("Failed to send message:", error);
     }
+
+    setSending(false);
   };
 
   const handlelogOut = async () => {
@@ -152,6 +202,67 @@ const Chat: React.FC = () => {
     }
   };
 
+  const toggleEmojiPicker = () => {
+    setShowEmojiPicker(!showEmojiPicker);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = (emojiData: any) => {
+    const emoji = emojiData.emoji;
+
+    const input = inputRef.current;
+    if (!input) return;
+
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const text = inputValue;
+
+    const updatedText =
+      text?.substring(0, start) + emoji + text.substring(end, text.length);
+
+    setInputValue(updatedText);
+
+    // Move cursor after emojiz
+    setTimeout(() => {
+      input.setSelectionRange(start + emoji.length, start + emoji.length);
+      input.focus();
+    }, 0);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      return alert("Max file size is 25mb");
+    }
+
+    setselectedFile(file);
+
+    if (file.type.startsWith("image/")) {
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
   return (
     <>
       <div className="flex items-end rounded-lg gap-3">
@@ -194,7 +305,7 @@ const Chat: React.FC = () => {
             )}
           </div>
           <div
-            className="overflow-y-auto px-4 h-[410px] overflow-auto"
+            className="overflow-y-auto px-4 h-[500px] overflow-auto"
             onClick={() => setClickInput(true)}
           >
             {loadingMessages
@@ -207,21 +318,89 @@ const Chat: React.FC = () => {
                   />
                 ))}
           </div>
+          {selectedFile && (
+            <div className="p-2 border-t bg-gray-50 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 overflow-hidden">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    className="w-24 h-auto rounded"
+                    alt="preview"
+                  />
+                ) : (
+                  <div className="text-sm text-gray-700 truncate max-w-[200px] flex items-center gap-2">
+                    <img src={fileSVG} alt="file" className="w-5 h-5 " />{" "}
+                    <span>{selectedFile.name}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setselectedFile(null);
+                  setPreviewUrl(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="text-red-500 hover:text-red-700 text-xl font-bold px-2"
+              >
+                &times;
+              </button>
+            </div>
+          )}
           <form className="flex p-2 border-t" onSubmit={handleSendMessage}>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="*/*"
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                className="hidden"
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 bg-transparent rounded mr-1"
+              >
+                <img src={clipSVG} alt="attach file" className="w-5 h-5 " />
+              </button>
+            </div>
             <input
+              ref={inputRef}
               type="text"
+              accept="*/*"
               placeholder="Type your message..."
               className="flex-1 p-2 border rounded-md"
-              value={input}
+              value={inputValue}
               onChange={(e) => {
-                setInput(e.target.value);
+                setInputValue(e.target.value);
                 setClickInput(true);
               }}
               onClick={() => setClickInput(true)}
             />
+            <div className="relative inline-block" ref={emojiButtonRef}>
+              <button
+                type="button"
+                onClick={toggleEmojiPicker}
+                className="ml-2 p-2 bg-transparent text-white rounded-md"
+              >
+                <img src={iconSVG} alt="emojis" className="w-5 h-5 " />
+              </button>
+
+              {showEmojiPicker && (
+                <div className="absolute z-10 bottom-full mb-2 right-[-71px] ">
+                  <EmojiPicker
+                    lazyLoadEmojis={true}
+                    onEmojiClick={handleEmojiClick}
+                  />
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               className="ml-2 p-2 bg-blue-500 text-white rounded-md"
+              disabled={sending}
             >
               Send
             </button>

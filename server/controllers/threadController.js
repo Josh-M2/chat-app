@@ -15,7 +15,7 @@ export const getUser = async (req, res) => {
 
 // Endpoint to send a message
 export const sendMessage = async (req, res) => {
-  const { senderId, receiverId, content, fileUrl } = req.body;
+  const { senderId, receiverId, content, fileUrl, fileType } = req.body;
   const socket = req.app.get("socket");
   try {
     const newMessage = new userThreadModel({
@@ -23,6 +23,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       content,
       fileUrl,
+      fileType,
     });
 
     const message = await newMessage.save(); // Save the message to the database

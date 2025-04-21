@@ -16,6 +16,7 @@ export type ChatMessageProps = {
     content: string;
     timestamp: string;
     fileUrl?: string;
+    fileType?: string;
   };
   isSender: boolean;
 };
@@ -25,6 +26,7 @@ export type SendChatTypes = {
   receiverId: string;
   content: string;
   fileUrl: string;
+  fileType: string;
 };
 
 export type Messages = {
@@ -34,4 +36,5 @@ export type Messages = {
   timestamp: string;
   senderId?: string;
   fileUrl?: string;
+  fileType?: string;
 };
