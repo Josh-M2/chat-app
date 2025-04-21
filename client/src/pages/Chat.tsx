@@ -17,8 +17,9 @@ import fileSVG from "../assets/file.svg";
 import clipSVG from "../assets/clip.svg";
 import iconSVG from "../assets/emoji.svg";
 
+import { upload } from "../services/upload";
+
 const Chat: React.FC = () => {
-  const cloudName = useMemo(() => import.meta.env.VITE_CLOUDINARY_NAME, []);
   const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
   const isLogin = useMemo(() => localStorage.getItem("isLogin"), []);
   const [selectedChat, setSelectedChat] = useState<User | null>(null);
@@ -143,18 +144,12 @@ const Chat: React.FC = () => {
       formData.append("upload_preset", "chatapp-preset");
 
       try {
-        const res = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+        const response = await upload(formData);
+        console.log("cloudinary", response);
 
-        const data = await res.json();
-        if (data.secure_url) {
-          fileUrl = data.secure_url;
-          fileType = data.resource_type;
+        if (response?.secure_url) {
+          fileUrl = response.secure_url;
+          fileType = response.resource_type;
         } else {
           throw new Error("Upload failed");
         }

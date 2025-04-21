@@ -38,3 +38,8 @@ export type Messages = {
   fileUrl?: string;
   fileType?: string;
 };
+
+export type uploadPromiseTypes = {
+  secure_url: string;
+  resource_type: string;
+};
