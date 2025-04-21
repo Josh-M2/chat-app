@@ -19,6 +19,7 @@ import iconSVG from "../assets/emoji.svg";
 
 import { upload } from "../services/upload";
 import { searchUser } from "../lib/sort";
+import { ConversationSkeleton } from "../components/SkelotonLoader";
 
 const Chat: React.FC = () => {
   const loggedInUserId = useMemo(() => localStorage.getItem("userID"), []);
@@ -316,15 +317,33 @@ const Chat: React.FC = () => {
             className="overflow-y-auto px-4 h-[500px] overflow-auto"
             onClick={() => setClickInput(true)}
           >
-            {loadingMessages
-              ? "loading"
-              : messages.map((msg, index) => (
-                  <ChatMessage
-                    key={index}
-                    message={msg}
-                    isSender={msg.isSender}
-                  />
-                ))}
+            {loadingMessages ? (
+              <div className="mt-6 flex flex-col gap-y-2">
+                <div className="flex justify-start">
+                  <ConversationSkeleton />
+                </div>
+                <div className="flex justify-end">
+                  <ConversationSkeleton />
+                </div>
+                <div className="flex justify-start">
+                  <ConversationSkeleton />
+                </div>
+                <div className="flex justify-end">
+                  <ConversationSkeleton />
+                </div>
+                <div className="flex justify-start">
+                  <ConversationSkeleton />
+                </div>
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <ChatMessage
+                  key={index}
+                  message={msg}
+                  isSender={msg.isSender}
+                />
+              ))
+            )}
           </div>
           {selectedFile && (
             <div className="p-2 border-t bg-gray-50 flex items-center justify-between gap-2">
