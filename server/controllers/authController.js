@@ -50,6 +50,7 @@ export const signUP = async (req, res) => {
     res.status(500).json({ message: "Error creat user" });
   }
 };
+
 export const logIn = async (req, res) => {
   const { email, password, captchaToken } = req.body;
   const socket = req.app.get("socket");
