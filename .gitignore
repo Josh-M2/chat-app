@@ -1,2 +1,5 @@
 client/.env
 server/.env
+client/tsconfig.app.tsbuildinfo
+.gitignore
+client/tsconfig.node.tsbuildinfo
