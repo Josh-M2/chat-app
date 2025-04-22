@@ -15,7 +15,7 @@ export const generateAndSetToken = (user, res) => {
   res.cookie("accessToken", signedToken, {
     httpOnly: true,
     secure: NODE_ENV === "development",
-    sameSite: NODE_ENV === "development" ? "None" : "strict",
+    sameSite: NODE_ENV === "development" ? "None" : "Strict",
     maxAge: tokenExpiry,
   });
 

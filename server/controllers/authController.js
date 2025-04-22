@@ -6,6 +6,7 @@ import { inputValidator } from "../lib/validator.js";
 import { generateAndSetToken } from "../lib/authenthicateUser.js";
 
 dotEnv.config();
+
 export const signUP = async (req, res) => {
   const socket = req.app.get("socket");
 
