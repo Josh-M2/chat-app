@@ -318,7 +318,9 @@ const Chat: React.FC = () => {
             className="overflow-y-auto px-4 h-[500px] overflow-auto"
             onClick={() => setClickInput(true)}
           >
-            {loadingMessages ? (
+            {!selectedChat ? (
+              ""
+            ) : loadingMessages ? (
               <div className="mt-6 flex flex-col gap-y-2">
                 <div className="flex justify-start">
                   <ConversationSkeleton />
