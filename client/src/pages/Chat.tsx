@@ -269,6 +269,7 @@ const Chat: React.FC = () => {
     console.log("search response: ", response);
     setFilteredUsers(response as User[]);
   }, [search]);
+
   return (
     <>
       <div className="flex items-end rounded-lg gap-3">

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { logoutProps } from "../types/user.types";
 
 const LogOut: React.FC<logoutProps> = ({ logoutTrigger }) => {

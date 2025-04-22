@@ -34,7 +34,7 @@ const Signup: React.FC = () => {
 
   const [errorsMain, setErrorsMain] = useState("");
 
-  const [showCaptcha, setShowCaptcha] = useState(true);
+  // const [showCaptcha, setShowCaptcha] = useState(true);
   const [captchaToken, setCaptchaToken] = useState<string | null>("");
 
   const handleCaptcha = (token: string | null) => {
@@ -275,12 +275,7 @@ const Signup: React.FC = () => {
             )}
 
             <div className="flex flex-col items-center">
-              {showCaptcha && (
-                <ReCAPTCHA
-                  sitekey={reCaptchaSiteKey!}
-                  onChange={handleCaptcha}
-                />
-              )}
+              <ReCAPTCHA sitekey={reCaptchaSiteKey!} onChange={handleCaptcha} />
             </div>
 
             <div>
