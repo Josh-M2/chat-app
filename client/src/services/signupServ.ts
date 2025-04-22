@@ -19,7 +19,7 @@ export const signupServ = async (
         withCredentials: true,
       }
     );
-    if (response.data) {
+    if (response) {
       console.log("signup res data: ", response.data.success);
       return response.data;
     }
