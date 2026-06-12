@@ -4,10 +4,10 @@ import axiosInst from "./api";
 export const signupServ = async (
   email: string,
   password: string,
-  captchaToken: string
+  captchaToken: string,
 ): Promise<successfulLogin | null> => {
   try {
-    console.log("signup creds: ", email, password);
+    // console.log("signup creds: ", email, password);
     const response = await axiosInst.post(
       "/auth/signup",
       {
@@ -17,7 +17,7 @@ export const signupServ = async (
       },
       {
         withCredentials: true,
-      }
+      },
     );
     if (response) {
       console.log("signup res data: ", response.data.success);
@@ -36,7 +36,7 @@ export const signupServ = async (
 
     console.error(
       "Signup serv Error: ",
-      error.response.data.message.email_taken
+      error.response.data.message.email_taken,
     );
   }
 
